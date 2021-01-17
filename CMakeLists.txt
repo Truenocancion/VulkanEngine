@@ -1,0 +1,21 @@
+cmake_minimum_required(VERSION 3.19)
+project(VulkanEngine)
+
+if(WIN32)
+  set(VE_WINDOWS 1)
+  if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(VE_PLATFORM_NAME "win64")
+  else()
+    set(VE_PLATFORM_NAME "win32")
+  endif()
+else()
+  message(FATAL_ERROR "unknown platform")
+endif()
+    
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
+
+add_subdirectory("src")
+add_subdirectory("third_party")
