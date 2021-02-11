@@ -39,4 +39,8 @@
       <UniqueIdentifier>{CA97B08B-63AD-3802-B291-DF5E5B0F5E22}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="D:\vulkan\VulkanEngine\src\shaders\vert.spv" />
+    <Text Include="D:\vulkan\VulkanEngine\src\shaders\frag.spv" />
+  </ItemGroup>
 </Project>

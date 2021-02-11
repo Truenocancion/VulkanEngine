@@ -71,7 +71,6 @@
       <UseFullPaths>false</UseFullPaths>
       <PreprocessorDefinitions>WIN32;_WINDOWS;CMAKE_INTDIR="Debug";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
-      <AssemblerOutput>NoListing</AssemblerOutput>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;CMAKE_INTDIR=\"Debug\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -114,7 +113,6 @@
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <DebugInformationFormat>
       </DebugInformationFormat>
-      <AssemblerOutput>NoListing</AssemblerOutput>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"Release\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -182,6 +180,12 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="D:\vulkan\VulkanEngine\src\render.h" />
     <ClCompile Include="D:\vulkan\VulkanEngine\src\render.cpp" />
     <ClInclude Include="D:\vulkan\VulkanEngine\src\dispatch.h" />
+    <Text Include="D:\vulkan\VulkanEngine\src\shaders\frag.spv">
+      <FileType>Document</FileType>
+    </Text>
+    <Text Include="D:\vulkan\VulkanEngine\src\shaders\vert.spv">
+      <FileType>Document</FileType>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="D:\vulkan\VulkanEngine\build_win64\ZERO_CHECK.vcxproj">

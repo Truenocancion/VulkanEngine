@@ -7,6 +7,8 @@ set(SRCS
 "render.h"
 "render.cpp"
 "dispatch.h"
+"shaders/frag.spv"
+"shaders/vert.spv"
 )
 
 add_executable(VulkanEngine WIN32 ${SRCS})
