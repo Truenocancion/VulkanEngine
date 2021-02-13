@@ -17,7 +17,7 @@ class CRender {
 	~CRender();
 
 	void Update();
-	void RecordClear();
+	void RecordClear(); // may not need in the future
 
 	void init_Instance();
 	void init_PhysicalDevice();
@@ -33,33 +33,31 @@ class CRender {
 	void init_SyncObjects();
 
 	static std::vector<char> readFile(const std::string& filename); 
-	VkShaderModule createShaderModule(const std::vector<char>& code);
-	VkSurfaceFormatKHR getFormat();
+	VkShaderModule init_ShaderModule(const std::vector<char>& code);
+	VkSurfaceFormatKHR getSwapSurfaceFormat();
 
-	bool m_bInitialFrame = true;
 	size_t currentFrame = 0;
 	SDispatch m_Dispatch{};
 
-	VkInstance m_Instance;
-	VkPhysicalDevice m_PhysicalDevice;
-	int m_GraphicsQueueFamily = -1;
-	VkDevice m_Device;
-	VkSurfaceKHR m_Surface;
-	VkSwapchainKHR m_Swapchain;
-	std::vector<VkImage> m_ScImages;
-	std::vector<VkImageView> m_ScImageViews; 
+	VkInstance m_Instance; 
+	VkPhysicalDevice m_PhysicalDevice; 
+	int m_GraphicsQueueFamily = -1; 
+	VkDevice m_Device; 
+	VkSurfaceKHR m_Surface; 
+	VkSwapchainKHR m_Swapchain; 
+	std::vector<VkImage> m_ScImages; 
+	std::vector<VkImageView> m_ScImageViews;
+	VkRenderPass m_RenderPass; 
 	VkShaderModule m_VertShader; 
 	VkShaderModule m_FragShader; 
-	VkRenderPass m_RenderPass;
-	VkPipelineLayout m_PipelineLayout;
-	VkPipeline m_Pipeline;
-	std::vector<VkFramebuffer> m_Framebuffers;
-	VkQueue m_Queue;
-	std::vector<VkSemaphore> m_SubmitSemaphores;
-	std::vector <VkSemaphore> m_PresentSemaphores;
-	std::vector<VkFence> m_Fences;
-	std::vector<VkFence> imagesInFlight;
+	VkPipelineLayout m_PipelineLayout; 
+	VkPipeline m_Pipeline; 
+	std::vector<VkFramebuffer> m_Framebuffers; 
+	VkQueue m_Queue; 
+	std::vector<VkSemaphore> m_SubmitSemaphores; 
+	std::vector <VkSemaphore> m_PresentSemaphores; 
+	std::vector<VkFence> m_Fences; 
+	std::vector<VkFence> imagesInFlight; 
 	VkCommandPool m_CommandPool;
-	VkCommandBuffer m_ClearCmd; // may not need in the future
-	std::vector<VkCommandBuffer> m_CommandBuffers;
+	std::vector<VkCommandBuffer> m_CommandBuffers; 
 };

@@ -61,13 +61,13 @@ struct SDispatch {
 	void InitInstance(VkInstance instance) {
 #define I(name) name = (PFN_##name)GetInstanceProcAddr(instance, #name) 
 
-		I(vkDestroyInstance); 
+		I(vkDestroyInstance);
+		I(vkDestroySurfaceKHR);
+		I(vkGetDeviceProcAddr);
 		I(vkEnumeratePhysicalDevices);
-		I(vkGetPhysicalDeviceProperties);
+		I(vkGetPhysicalDeviceProperties); // not used anywhere yet
 		I(vkGetPhysicalDeviceQueueFamilyProperties);
 		I(vkCreateDevice);
-		I(vkGetDeviceProcAddr);
-		I(vkDestroySurfaceKHR);
 		I(vkGetPhysicalDeviceSurfaceSupportKHR);
 		I(vkGetPhysicalDeviceSurfaceFormatsKHR);
 	}

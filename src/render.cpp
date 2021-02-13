@@ -33,7 +33,7 @@ void CRender::init_Instance() {
 
 	VkApplicationInfo appInfo{};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pApplicationName = "V engine";
+	appInfo.pApplicationName = "Vulkan engine";
 	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 	appInfo.pEngineName = "Vulkan engine";
 	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
@@ -108,6 +108,8 @@ void CRender::init_Device() {
 	if (m_Dispatch.vkCreateDevice(m_PhysicalDevice, &deviceCreateInfo, nullptr, &m_Device) != VK_SUCCESS) abort();
 
 	m_Dispatch.InitDevice(m_Device);
+
+	m_Dispatch.vkGetDeviceQueue(m_Device, m_GraphicsQueueFamily, 0, &m_Queue);
 }
 
 void CRender::init_Surface() {
@@ -123,8 +125,8 @@ void CRender::init_SwapChain() {
 	scCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 	scCreateInfo.surface = m_Surface;
 	scCreateInfo.minImageCount = 2;
-	scCreateInfo.imageFormat = getFormat().format;
-	scCreateInfo.imageColorSpace = getFormat().colorSpace;
+	scCreateInfo.imageFormat = getSwapSurfaceFormat().format;
+	scCreateInfo.imageColorSpace = getSwapSurfaceFormat().colorSpace;
 	scCreateInfo.imageExtent.width = kWindowWidth;
 	scCreateInfo.imageExtent.height = kWindowHeight;
 	scCreateInfo.imageArrayLayers = 1;
@@ -145,8 +147,7 @@ void CRender::init_ImageViews() {
 	m_Dispatch.vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &scImageCount, nullptr);
 	m_ScImages.resize(scImageCount);
 	m_Dispatch.vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &scImageCount, m_ScImages.data());
-
-	m_Dispatch.vkGetDeviceQueue(m_Device, m_GraphicsQueueFamily, 0, &m_Queue); // why here 
+ 
 	m_ScImageViews.resize(scImageCount); 
 
 	for (int i = 0; i < scImageCount; i++) {
@@ -154,7 +155,7 @@ void CRender::init_ImageViews() {
 		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		createInfo.image = m_ScImages[i];
 		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		createInfo.format = getFormat().format;
+		createInfo.format = getSwapSurfaceFormat().format;
 		createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		createInfo.components.r = VK_COMPONENT_SWIZZLE_R;
 		createInfo.components.g = VK_COMPONENT_SWIZZLE_G;
@@ -170,14 +171,12 @@ void CRender::init_ImageViews() {
 void CRender::init_RenderPass() {
 	VkSubpassDependency dependency{};
 	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-	dependency.dstSubpass = 0;
 	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.srcAccessMask = 0;
 	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
 	VkAttachmentDescription colorAttachment{};
-	colorAttachment.format = getFormat().format;
+	colorAttachment.format = getSwapSurfaceFormat().format;
 	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -187,7 +186,6 @@ void CRender::init_RenderPass() {
 	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 	VkAttachmentReference colorAttachmentRef{};
-	colorAttachmentRef.attachment = 0;
 	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	VkSubpassDescription subpass{};
@@ -208,14 +206,12 @@ void CRender::init_RenderPass() {
 }
 
 void CRender::init_GraphicsPipeline() {
-	// loading shaders + creating shader modules:
 	std::vector<char> vertShaderCode = readFile("src/shaders/vert.spv");
 	std::vector<char> fragShaderCode = readFile("src/shaders/frag.spv");
 
-	m_VertShader = createShaderModule(vertShaderCode);
-	m_FragShader = createShaderModule(fragShaderCode);
+	m_VertShader = init_ShaderModule(vertShaderCode);
+	m_FragShader = init_ShaderModule(fragShaderCode);
 
-	// graphics pipeline:
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
 	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -232,8 +228,6 @@ void CRender::init_GraphicsPipeline() {
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount = 0;
-	vertexInputInfo.vertexAttributeDescriptionCount = 0;
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
 	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -342,35 +336,33 @@ void CRender::init_CommandBuffers() {
 	commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	commandBufferAllocateInfo.commandPool = m_CommandPool;
 	commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	//commandBufferAllocateInfo.commandBufferCount = 1;
 	commandBufferAllocateInfo.commandBufferCount = m_CommandBuffers.size();
 
-	//m_Dispatch.vkAllocateCommandBuffers(m_Device, &commandBufferAllocateInfo, &m_ClearCmd);
 	if (m_Dispatch.vkAllocateCommandBuffers(m_Device, &commandBufferAllocateInfo, m_CommandBuffers.data()) != VK_SUCCESS) abort();
 
-	for (auto commandBuffer : m_CommandBuffers) {
+	for (size_t i = 0; i < m_CommandBuffers.size(); i++) {
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-		if (m_Dispatch.vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) abort();
-	}
+		if (m_Dispatch.vkBeginCommandBuffer(m_CommandBuffers[i], &beginInfo) != VK_SUCCESS) abort();
 
-	for (int i = 0; i < m_Framebuffers.size(); i++) {
 		VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-
+		 
 		VkRenderPassBeginInfo renderPassBeginInfo{};
 		renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderPassBeginInfo.renderPass = m_RenderPass;
 		renderPassBeginInfo.framebuffer = m_Framebuffers[i];
+		renderPassBeginInfo.renderArea.offset = { 0, 0 };
+		renderPassBeginInfo.renderArea.extent = { kWindowWidth, kWindowHeight };
 		renderPassBeginInfo.clearValueCount = 1;
 		renderPassBeginInfo.pClearValues = &clearColor;
 
 		m_Dispatch.vkCmdBeginRenderPass(m_CommandBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
+		
 		m_Dispatch.vkCmdBindPipeline(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
-
+		
 		m_Dispatch.vkCmdDraw(m_CommandBuffers[i], 3, 1, 0, 0);
-
+		
 		m_Dispatch.vkCmdEndRenderPass(m_CommandBuffers[i]);
 
 		if (m_Dispatch.vkEndCommandBuffer(m_CommandBuffers[i]) != VK_SUCCESS) abort();
@@ -383,16 +375,16 @@ void CRender::init_SyncObjects() {
 	m_Fences.resize(MAX_FRAMES_IN_FLIGHT);
 	imagesInFlight.resize(m_ScImages.size(), VK_NULL_HANDLE);
 
-	VkSemaphoreCreateInfo semaphoreCreateInfo{};
-	semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	VkSemaphoreCreateInfo semaphoreInfo{};
+	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
 	VkFenceCreateInfo fenceInfo{};
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		if (m_Dispatch.vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_PresentSemaphores[i]) != VK_SUCCESS) abort();
-		if (m_Dispatch.vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_SubmitSemaphores[i]) != VK_SUCCESS) abort();
+		if (m_Dispatch.vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &m_PresentSemaphores[i]) != VK_SUCCESS) abort();
+		if (m_Dispatch.vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &m_SubmitSemaphores[i]) != VK_SUCCESS) abort();
 		if (m_Dispatch.vkCreateFence(m_Device, &fenceInfo, nullptr, &m_Fences[i]) != VK_SUCCESS) abort();
 	}
 }
@@ -423,8 +415,10 @@ CRender::~CRender() {
 }
 
 void CRender::Update() {
+	m_Dispatch.vkWaitForFences(m_Device, 1, &m_Fences[currentFrame], VK_TRUE, UINT64_MAX);
+	
 	uint32_t nextImage;
-	m_Dispatch.vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX, m_SubmitSemaphores[currentFrame], nullptr, &nextImage);
+	m_Dispatch.vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX, m_PresentSemaphores[currentFrame], nullptr, &nextImage);
 	
 	if (imagesInFlight[nextImage] != VK_NULL_HANDLE) {
 		m_Dispatch.vkWaitForFences(m_Device, 1, &imagesInFlight[nextImage], VK_TRUE, UINT64_MAX);
@@ -432,22 +426,20 @@ void CRender::Update() {
 
 	imagesInFlight[nextImage] = m_Fences[currentFrame];
 
-	//RecordClear();
-
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = &m_SubmitSemaphores[currentFrame];
+	submitInfo.pWaitSemaphores = &m_PresentSemaphores[currentFrame];
 	submitInfo.commandBufferCount = 1;
-	//submitInfo.pCommandBuffers = &m_ClearCmd;
 	submitInfo.pCommandBuffers = &m_CommandBuffers[nextImage];
 	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores = &m_PresentSemaphores[currentFrame];
+	submitInfo.pSignalSemaphores = &m_SubmitSemaphores[currentFrame];
 	submitInfo.pWaitDstStageMask = waitStages;
 
 	m_Dispatch.vkResetFences(m_Device, 1, &m_Fences[currentFrame]);
+	
 	m_Dispatch.vkQueueSubmit(m_Queue, 1, &submitInfo, m_Fences[currentFrame]);
 
 	m_Dispatch.vkWaitForFences(m_Device, 1, &m_Fences[currentFrame], VK_TRUE, UINT64_MAX);
@@ -455,44 +447,14 @@ void CRender::Update() {
 	VkPresentInfoKHR presentInfo{};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	presentInfo.waitSemaphoreCount = 1;
-	presentInfo.pWaitSemaphores = &m_PresentSemaphores[currentFrame];
+	presentInfo.pWaitSemaphores = &m_SubmitSemaphores[currentFrame];
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = &m_Swapchain;
 	presentInfo.pImageIndices = &nextImage;
 	
 	m_Dispatch.vkQueuePresentKHR(m_Queue, &presentInfo);
-	m_Dispatch.vkQueueWaitIdle(m_Queue);
 
 	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-	m_bInitialFrame = false;
-}
-
-void CRender::RecordClear(){
-	m_Dispatch.vkResetCommandBuffer(m_ClearCmd, 0);
-	
-	VkCommandBufferBeginInfo beginInfo{};
-	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-	m_Dispatch.vkBeginCommandBuffer(m_ClearCmd, &beginInfo);
-
-	if (m_bInitialFrame) {
-		VkImageMemoryBarrier initialBarrier{};
-		initialBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		initialBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		initialBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-		initialBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		initialBarrier.subresourceRange.levelCount = 1;
-		initialBarrier.subresourceRange.layerCount = 1;
-
-		for (VkImage image : m_ScImages) {
-			initialBarrier.image = image;
-
-			m_Dispatch.vkCmdPipelineBarrier(m_ClearCmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &initialBarrier);
-		}
-	}
-
-	m_Dispatch.vkEndCommandBuffer(m_ClearCmd);
 }
 
 std::vector<char> CRender::readFile(const std::string& filename) {
@@ -508,7 +470,7 @@ std::vector<char> CRender::readFile(const std::string& filename) {
 	return buffer;
 }
 
-VkShaderModule CRender::createShaderModule(const std::vector<char>& code) {
+VkShaderModule CRender::init_ShaderModule(const std::vector<char>& code) {
 	VkShaderModuleCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 	createInfo.codeSize = code.size();
@@ -520,7 +482,7 @@ VkShaderModule CRender::createShaderModule(const std::vector<char>& code) {
 	return shaderModule;
 }
 
-VkSurfaceFormatKHR CRender::getFormat() {
+VkSurfaceFormatKHR CRender::getSwapSurfaceFormat() {
 	uint32_t surfaceFormatsCount;
 	if (m_Dispatch.vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, m_Surface, &surfaceFormatsCount, nullptr) != VK_SUCCESS) abort();
 
@@ -528,13 +490,10 @@ VkSurfaceFormatKHR CRender::getFormat() {
 	sSurfaceFormats.resize(surfaceFormatsCount);
 	if (m_Dispatch.vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, m_Surface, &surfaceFormatsCount, sSurfaceFormats.data()) != VK_SUCCESS) abort();
 
-	int iBestFormat = 0;
 	for (int i = 0; i < surfaceFormatsCount; i++) {
 		if ((sSurfaceFormats[i].colorSpace & VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) && (sSurfaceFormats[i].format & kBackBufferFormat)) {
-			iBestFormat = i;
-			break;
+			return sSurfaceFormats[i];
 		}
 	}
-
-	return sSurfaceFormats[iBestFormat];
+	return sSurfaceFormats[0];
 }

@@ -1,9 +1,1 @@
-﻿  Checking Build System
-  CMake is re-running because D:/vulkan/VulkanEngine/build_win64/src/CMakeFiles/generate.stamp is out-of-date.
-    the file 'D:/vulkan/VulkanEngine/src/CMakeLists.txt'
-    is newer than 'D:/vulkan/VulkanEngine/build_win64/src/CMakeFiles/generate.stamp.depend'
-    result='-1'
-  -- Selecting Windows SDK version 10.0.18362.0 to target Windows 10.0.19042.
-  -- Configuring done
-  -- Generating done
-  -- Build files have been written to: D:/vulkan/VulkanEngine/build_win64
+﻿
