@@ -8,7 +8,7 @@ CEngine::CEngine() {
 	gEngine = this;
 
 	m_Viewport = new CViewport();
-	m_Render = new CRender();
+	m_Render = new VulkanRender();
 }
 
 CEngine::~CEngine(){
@@ -43,7 +43,7 @@ CViewport* CEngine::GetViewport() const
 	return m_Viewport;
 }
 
-CRender* CEngine::GetRender() const
+VulkanRender* CEngine::GetRender() const
 {
 	return m_Render;
 }

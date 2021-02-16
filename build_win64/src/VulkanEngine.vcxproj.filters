@@ -27,9 +27,16 @@
     <ClInclude Include="D:\vulkan\VulkanEngine\src\dispatch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="D:\vulkan\VulkanEngine\src\vertex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="D:\vulkan\VulkanEngine\src\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="D:\vulkan\VulkanEngine\src\shaders\frag.spv" />
+    <None Include="D:\vulkan\VulkanEngine\src\shaders\vert.spv" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
@@ -38,9 +45,5 @@
     <Filter Include="Source Files">
       <UniqueIdentifier>{CA97B08B-63AD-3802-B291-DF5E5B0F5E22}</UniqueIdentifier>
     </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="D:\vulkan\VulkanEngine\src\shaders\vert.spv" />
-    <Text Include="D:\vulkan\VulkanEngine\src\shaders\frag.spv" />
   </ItemGroup>
 </Project>

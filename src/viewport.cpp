@@ -1,5 +1,6 @@
 #include "viewport.h"
 #include "engine.h"
+#include "render.h"
 
 CViewport::CViewport() {
 	m_Window = SDL_CreateWindow(
@@ -26,6 +27,7 @@ void CViewport::Update() {
 				break;
 			case SDL_WINDOWEVENT_RESIZED:
 				gEngine->OnViewportResize(event.window.data1, event.window.data2);
+				gEngine->GetRender()->onWindowResize(event.window.data1, event.window.data2);
 				break;
 			}
 			break;

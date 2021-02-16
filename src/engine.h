@@ -4,7 +4,7 @@ const int kWindowWidth = 1920;
 const int kWindowHeight = 1080;
 
 class CViewport;
-class CRender;
+class VulkanRender;
 
 class CEngine {
 
@@ -16,7 +16,7 @@ class CEngine {
 	bool m_bShouldRun = true;
 
 	CViewport* m_Viewport;
-	CRender* m_Render;
+	VulkanRender* m_Render;
 
 	int m_Width = kWindowWidth;
 	int m_Height = kWindowHeight;
@@ -29,7 +29,7 @@ public:
 	void OnViewportResize(int width, int height);
 
 	CViewport* GetViewport() const;
-	CRender* GetRender() const;
+	VulkanRender* GetRender() const;
 };
 
 extern CEngine* gEngine;

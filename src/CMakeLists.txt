@@ -7,6 +7,7 @@ set(SRCS
 "render.h"
 "render.cpp"
 "dispatch.h"
+"vertex.h"
 "shaders/frag.spv"
 "shaders/vert.spv"
 )

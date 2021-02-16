@@ -3,7 +3,7 @@
 
 class CViewport{
 	friend class CEngine;
-	friend class CRender;
+	friend class VulkanRender;
 
 	CViewport();
 	

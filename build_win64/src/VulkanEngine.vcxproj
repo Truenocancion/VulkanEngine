@@ -180,12 +180,11 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="D:\vulkan\VulkanEngine\src\render.h" />
     <ClCompile Include="D:\vulkan\VulkanEngine\src\render.cpp" />
     <ClInclude Include="D:\vulkan\VulkanEngine\src\dispatch.h" />
-    <Text Include="D:\vulkan\VulkanEngine\src\shaders\frag.spv">
-      <FileType>Document</FileType>
-    </Text>
-    <Text Include="D:\vulkan\VulkanEngine\src\shaders\vert.spv">
-      <FileType>Document</FileType>
-    </Text>
+    <ClInclude Include="D:\vulkan\VulkanEngine\src\vertex.h" />
+    <None Include="D:\vulkan\VulkanEngine\src\shaders\frag.spv">
+    </None>
+    <None Include="D:\vulkan\VulkanEngine\src\shaders\vert.spv">
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="D:\vulkan\VulkanEngine\build_win64\ZERO_CHECK.vcxproj">
