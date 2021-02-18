@@ -17,6 +17,7 @@ VulkanRender::VulkanRender() {
 	init_Framebuffers();
 	init_CommandPool();
 	init_VertexBuffer();
+	init_IndexBuffer();
 	init_CommandBuffers();
 	init_SyncObjects();
 }
@@ -29,7 +30,7 @@ void VulkanRender::init_Instance() {
 	instanceExtensions.resize(instanceExtensionCount);
 	SDL_Vulkan_GetInstanceExtensions(gEngine->GetViewport()->m_Window, &instanceExtensionCount, instanceExtensions.data());
 
-	m_Dispatch.GetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)SDL_Vulkan_GetVkGetInstanceProcAddr();
+	m_Dispatch.GetInstanceProcAddr = static_cast<PFN_vkGetInstanceProcAddr>(SDL_Vulkan_GetVkGetInstanceProcAddr());
 	m_Dispatch.InitGlobal();
 
 	VkApplicationInfo appInfo{};
@@ -129,15 +130,15 @@ void VulkanRender::init_Swapchain() {
 	scCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 	scCreateInfo.surface = m_Surface;
 	scCreateInfo.minImageCount = 2;
-	scCreateInfo.imageFormat = getSwapSurfaceFormat().format;
-	scCreateInfo.imageColorSpace = getSwapSurfaceFormat().colorSpace;
+	scCreateInfo.imageFormat = get_SwapSurface_Format().format;
+	scCreateInfo.imageColorSpace = get_SwapSurface_Format().colorSpace;
 	scCreateInfo.imageExtent.width = m_Width;
 	scCreateInfo.imageExtent.height = m_Height;
 	scCreateInfo.imageArrayLayers = 1;
 	scCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	scCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	scCreateInfo.queueFamilyIndexCount = 1;
-	scCreateInfo.pQueueFamilyIndices = (uint32_t*)&m_GraphicsQueueFamily;
+	scCreateInfo.pQueueFamilyIndices = reinterpret_cast<uint32_t*>(&m_GraphicsQueueFamily);
 	scCreateInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 	scCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 	scCreateInfo.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
@@ -159,7 +160,7 @@ void VulkanRender::init_ImageViews() {
 		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		createInfo.image = m_ScImages[i];
 		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		createInfo.format = getSwapSurfaceFormat().format;
+		createInfo.format = get_SwapSurface_Format().format;
 		createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		createInfo.components.r = VK_COMPONENT_SWIZZLE_R;
 		createInfo.components.g = VK_COMPONENT_SWIZZLE_G;
@@ -180,7 +181,7 @@ void VulkanRender::init_RenderPass() {
 	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
 	VkAttachmentDescription colorAttachment{};
-	colorAttachment.format = getSwapSurfaceFormat().format;
+	colorAttachment.format = get_SwapSurface_Format().format;
 	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -210,8 +211,8 @@ void VulkanRender::init_RenderPass() {
 }
 
 void VulkanRender::init_GraphicsPipeline() {
-	std::vector<char> vertShaderCode = readFile("src/shaders/vert.spv");
-	std::vector<char> fragShaderCode = readFile("src/shaders/frag.spv");
+	std::vector<char> vertShaderCode = read_shader_file("src/shaders/vert.spv");
+	std::vector<char> fragShaderCode = read_shader_file("src/shaders/frag.spv");
 
 	m_VertShader = init_ShaderModule(vertShaderCode);
 	m_FragShader = init_ShaderModule(fragShaderCode);
@@ -248,14 +249,14 @@ void VulkanRender::init_GraphicsPipeline() {
 	VkViewport viewport{};
 	viewport.x = 0.0f;
 	viewport.y = 0.0f;
-	viewport.width = (float)m_Width;
-	viewport.height = (float)m_Height;
+	viewport.width = static_cast<float>(m_Width);
+	viewport.height = static_cast<float>(m_Height);
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 
 	VkRect2D scissor{};
 	scissor.offset = { 0, 0 };
-	scissor.extent = { (uint32_t)m_Width, (uint32_t)m_Height };
+	scissor.extent = { static_cast<uint32_t>(m_Width), static_cast<uint32_t>(m_Height) };
 
 	VkPipelineViewportStateCreateInfo viewportState{};
 	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -341,30 +342,61 @@ void VulkanRender::init_CommandPool() {
 }
 
 void VulkanRender::init_VertexBuffer(){
-	VkBufferCreateInfo bufferCreateInfo{};
-	bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferCreateInfo.size = sizeof(t_vertices[0]) * t_vertices.size();
-	bufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-	bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	VkDeviceSize bufferSize = sizeof(m_Vertices[0]) * m_Vertices.size();
 
-	m_Dispatch.vkCreateBuffer(m_Device, &bufferCreateInfo, nullptr, &m_VertexBuffer);
-
-	VkMemoryRequirements memoryRequirements;
-	m_Dispatch.vkGetBufferMemoryRequirements(m_Device, m_VertexBuffer, &memoryRequirements);
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
 	
-	VkMemoryAllocateInfo memoryAllocationInfo{};
-	memoryAllocationInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	memoryAllocationInfo.allocationSize = memoryRequirements.size;
-	memoryAllocationInfo.memoryTypeIndex = findMemoryType(memoryRequirements.memoryTypeBits);
-	
-	if (m_Dispatch.vkAllocateMemory(m_Device, &memoryAllocationInfo, nullptr, &m_VertexBufferMemory) != VK_SUCCESS) abort();
-
-	m_Dispatch.vkBindBufferMemory(m_Device, m_VertexBuffer, m_VertexBufferMemory, 0);
+	init_Buffer(bufferSize, 
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+				stagingBuffer,
+				stagingBufferMemory);
 	
 	void* data;
-	m_Dispatch.vkMapMemory(m_Device, m_VertexBufferMemory, 0, bufferCreateInfo.size, 0, &data);
-	memcpy(data, t_vertices.data(), (size_t)bufferCreateInfo.size);
-	m_Dispatch.vkUnmapMemory(m_Device, m_VertexBufferMemory);
+	m_Dispatch.vkMapMemory(m_Device, stagingBufferMemory, 0, bufferSize, 0, &data);
+	memcpy(data, m_Vertices.data(), static_cast<size_t>(bufferSize));
+	m_Dispatch.vkUnmapMemory(m_Device, stagingBufferMemory);
+
+	init_Buffer(bufferSize, 
+				VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+				m_VertexBuffer, 
+				m_VertexBufferMemory);
+
+	copy_Buffer(stagingBuffer, m_VertexBuffer, bufferSize);
+
+	m_Dispatch.vkDestroyBuffer(m_Device, stagingBuffer, nullptr);
+	m_Dispatch.vkFreeMemory(m_Device, stagingBufferMemory, nullptr);
+}
+
+void VulkanRender::init_IndexBuffer(){
+	VkDeviceSize bufferSize = sizeof(m_Indices[0]) * m_Indices.size();
+
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+	
+	init_Buffer(bufferSize, 
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+				stagingBuffer, 
+				stagingBufferMemory);
+
+	void* data;
+	m_Dispatch.vkMapMemory(m_Device, stagingBufferMemory, 0, bufferSize, 0, &data);
+	memcpy(data, m_Indices.data(), static_cast<size_t>(bufferSize));
+	m_Dispatch.vkUnmapMemory(m_Device, stagingBufferMemory);
+
+	init_Buffer(bufferSize, 
+				VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				m_IndexBuffer,
+				m_IndexBufferMemory);
+
+	copy_Buffer(stagingBuffer, m_IndexBuffer, bufferSize);
+
+	m_Dispatch.vkDestroyBuffer(m_Device, stagingBuffer, nullptr);
+	m_Dispatch.vkFreeMemory(m_Device, stagingBufferMemory, nullptr);
 }
 
 void VulkanRender::init_CommandBuffers() {
@@ -391,7 +423,7 @@ void VulkanRender::init_CommandBuffers() {
 		renderPassBeginInfo.renderPass = m_RenderPass;
 		renderPassBeginInfo.framebuffer = m_Framebuffers[i];
 		renderPassBeginInfo.renderArea.offset = { 0, 0 };
-		renderPassBeginInfo.renderArea.extent = { (uint32_t)m_Width, (uint32_t)m_Height };
+		renderPassBeginInfo.renderArea.extent = { static_cast<uint32_t>(m_Width), static_cast<uint32_t>(m_Height) };
 		renderPassBeginInfo.clearValueCount = 1;
 		renderPassBeginInfo.pClearValues = &clearColor;
 
@@ -402,7 +434,9 @@ void VulkanRender::init_CommandBuffers() {
 		VkDeviceSize offsets[] = { 0 };
 		m_Dispatch.vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &m_VertexBuffer, offsets);
 
-		m_Dispatch.vkCmdDraw(m_CommandBuffers[i], static_cast<uint32_t>(t_vertices.size()), 1, 0, 0);
+		m_Dispatch.vkCmdBindIndexBuffer(m_CommandBuffers[i], m_IndexBuffer, 0, VK_INDEX_TYPE_UINT16);
+		
+		m_Dispatch.vkCmdDrawIndexed(m_CommandBuffers[i], static_cast<uint32_t>(m_Indices.size()), 1, 0, 0, 0);
 		
 		m_Dispatch.vkCmdEndRenderPass(m_CommandBuffers[i]);
 
@@ -432,17 +466,26 @@ void VulkanRender::init_SyncObjects() {
 
 VulkanRender::~VulkanRender() {
 	m_Dispatch.vkDeviceWaitIdle(m_Device);
-	cleanupSwapchain();
+	
+	cleanup_Swapchain();
+
+	m_Dispatch.vkDestroyBuffer(m_Device, m_IndexBuffer, nullptr);
+	m_Dispatch.vkFreeMemory(m_Device, m_IndexBufferMemory, nullptr);
+	
 	m_Dispatch.vkDestroyBuffer(m_Device, m_VertexBuffer, nullptr);
 	m_Dispatch.vkFreeMemory(m_Device, m_VertexBufferMemory, nullptr);
+	
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		m_Dispatch.vkDestroyFence(m_Device, m_Fences[i], nullptr);
 		m_Dispatch.vkDestroySemaphore(m_Device, m_SubmitSemaphores[i], nullptr);
 		m_Dispatch.vkDestroySemaphore(m_Device, m_PresentSemaphores[i], nullptr);
 	}
+
 	m_Dispatch.vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
+	
 	m_Dispatch.vkDestroyShaderModule(m_Device, m_FragShader, nullptr);
 	m_Dispatch.vkDestroyShaderModule(m_Device, m_VertShader, nullptr);
+	
 	m_Dispatch.vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
 	m_Dispatch.vkDestroyDevice(m_Device, nullptr);
 	m_Dispatch.vkDestroyInstance(m_Instance, nullptr);
@@ -496,11 +539,27 @@ void VulkanRender::Update() {
 	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
-std::vector<char> VulkanRender::readFile(const std::string& filename) {
+VkSurfaceFormatKHR VulkanRender::get_SwapSurface_Format() {
+	uint32_t surfaceFormatsCount;
+	if (m_Dispatch.vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, m_Surface, &surfaceFormatsCount, nullptr) != VK_SUCCESS) abort();
+
+	std::vector<VkSurfaceFormatKHR> sSurfaceFormats;
+	sSurfaceFormats.resize(surfaceFormatsCount);
+	if (m_Dispatch.vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, m_Surface, &surfaceFormatsCount, sSurfaceFormats.data()) != VK_SUCCESS) abort();
+
+	for (int i = 0; i < surfaceFormatsCount; i++) {
+		if ((sSurfaceFormats[i].colorSpace & VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) && (sSurfaceFormats[i].format & kBackBufferFormat)) {
+			return sSurfaceFormats[i];
+		}
+	}
+	return sSurfaceFormats[0];
+}
+
+std::vector<char> VulkanRender::read_shader_file(const std::string& filename) {
 	std::ifstream file(filename, std::ios::ate | std::ios::binary);
 	if (!file.is_open()) abort();
 
-	size_t fileSize = (size_t)file.tellg();
+	size_t fileSize = static_cast<size_t>(file.tellg());
 	std::vector<char> buffer(fileSize);
 	file.seekg(0);
 	file.read(buffer.data(), fileSize);
@@ -521,35 +580,74 @@ VkShaderModule VulkanRender::init_ShaderModule(const std::vector<char>& code) {
 	return shaderModule;
 }
 
-VkSurfaceFormatKHR VulkanRender::getSwapSurfaceFormat() {
-	uint32_t surfaceFormatsCount;
-	if (m_Dispatch.vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, m_Surface, &surfaceFormatsCount, nullptr) != VK_SUCCESS) abort();
-
-	std::vector<VkSurfaceFormatKHR> sSurfaceFormats;
-	sSurfaceFormats.resize(surfaceFormatsCount);
-	if (m_Dispatch.vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, m_Surface, &surfaceFormatsCount, sSurfaceFormats.data()) != VK_SUCCESS) abort();
-
-	for (int i = 0; i < surfaceFormatsCount; i++) {
-		if ((sSurfaceFormats[i].colorSpace & VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) && (sSurfaceFormats[i].format & kBackBufferFormat)) {
-			return sSurfaceFormats[i];
-		}
-	}
-	return sSurfaceFormats[0];
-}
-
-uint32_t VulkanRender::findMemoryType(uint32_t typeFilter){
+uint32_t VulkanRender::find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties){
 	VkPhysicalDeviceMemoryProperties memoryProperties;
 	m_Dispatch.vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &memoryProperties);
-	VkMemoryPropertyFlags propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 	for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++) {
-		if ((typeFilter & (1 << i)) && (memoryProperties.memoryTypes[i].propertyFlags & propertyFlags) == propertyFlags) {
+		if ((type_filter & (1 << i)) && (memoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
 			return i;
 		}
 	}
 }
 
-void VulkanRender::cleanupSwapchain(){
+void VulkanRender::init_Buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory){
+	VkBufferCreateInfo bufferCreateInfo{};
+	bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferCreateInfo.size = size;
+	bufferCreateInfo.usage = usage;
+	bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	m_Dispatch.vkCreateBuffer(m_Device, &bufferCreateInfo, nullptr, &buffer);
+
+	VkMemoryRequirements memoryRequirements;
+	m_Dispatch.vkGetBufferMemoryRequirements(m_Device, buffer, &memoryRequirements);
+
+	VkMemoryAllocateInfo memoryAllocationInfo{};
+	memoryAllocationInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	memoryAllocationInfo.allocationSize = memoryRequirements.size;
+	memoryAllocationInfo.memoryTypeIndex = find_memory_type(memoryRequirements.memoryTypeBits, properties);
+
+	if (m_Dispatch.vkAllocateMemory(m_Device, &memoryAllocationInfo, nullptr, &bufferMemory) != VK_SUCCESS) abort();
+
+	m_Dispatch.vkBindBufferMemory(m_Device, buffer, bufferMemory, 0);
+}
+
+void VulkanRender::copy_Buffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size){
+	VkCommandBufferAllocateInfo bufferAllocateInfo{};
+	bufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	bufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	bufferAllocateInfo.commandPool = m_CommandPool;
+	bufferAllocateInfo.commandBufferCount = 1;
+
+	VkCommandBuffer commandBuffer;
+	m_Dispatch.vkAllocateCommandBuffers(m_Device, &bufferAllocateInfo, &commandBuffer);
+
+	VkCommandBufferBeginInfo bufferBeginInfo{};
+	bufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	bufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	m_Dispatch.vkBeginCommandBuffer(commandBuffer, &bufferBeginInfo);
+
+	VkBufferCopy copyRegion{};
+	copyRegion.size = size;
+	
+	m_Dispatch.vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+	m_Dispatch.vkEndCommandBuffer(commandBuffer);
+
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+
+	m_Dispatch.vkQueueSubmit(m_Queue, 1, &submitInfo, VK_NULL_HANDLE);
+	m_Dispatch.vkQueueWaitIdle(m_Queue);
+
+	m_Dispatch.vkFreeCommandBuffers(m_Device, m_CommandPool, 1, &commandBuffer);
+}
+
+void VulkanRender::cleanup_Swapchain(){
 	for (auto framebuffer : m_Framebuffers) {
 		m_Dispatch.vkDestroyFramebuffer(m_Device, framebuffer, nullptr);
 	}
@@ -566,7 +664,7 @@ void VulkanRender::cleanupSwapchain(){
 void VulkanRender::reinit_Swapchain(){
 	m_Dispatch.vkDeviceWaitIdle(m_Device);
 
-	cleanupSwapchain();
+	cleanup_Swapchain();
 
 	init_Swapchain();
 	init_ImageViews();

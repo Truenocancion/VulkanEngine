@@ -35,7 +35,9 @@ struct SDispatch {
 	PFN_vkCmdBeginRenderPass vkCmdBeginRenderPass;
 	PFN_vkCmdBindPipeline vkCmdBindPipeline;
 	PFN_vkCmdBindVertexBuffers vkCmdBindVertexBuffers;
+	PFN_vkCmdBindIndexBuffer vkCmdBindIndexBuffer;
 	PFN_vkCmdDraw vkCmdDraw;
+	PFN_vkCmdDrawIndexed vkCmdDrawIndexed;
 	PFN_vkCmdEndRenderPass vkCmdEndRenderPass;
 	PFN_vkEndCommandBuffer vkEndCommandBuffer;
 	PFN_vkCreateSemaphore vkCreateSemaphore;
@@ -60,6 +62,9 @@ struct SDispatch {
 	PFN_vkDestroyCommandPool vkDestroyCommandPool;
 	PFN_vkDestroyShaderModule vkDestroyShaderModule;
 	PFN_vkDestroyDevice vkDestroyDevice;
+
+	PFN_vkCmdCopyBuffer vkCmdCopyBuffer;
+	PFN_vkQueueWaitIdle vkQueueWaitIdle;
 
 	void InitGlobal() {
 		CreateInstance = (PFN_vkCreateInstance)GetInstanceProcAddr(nullptr, "vkCreateInstance");
@@ -103,7 +108,9 @@ struct SDispatch {
 		D(vkCmdBeginRenderPass);
 		D(vkCmdBindPipeline);
 		D(vkCmdBindVertexBuffers);
+		D(vkCmdBindIndexBuffer);
 		D(vkCmdDraw);
+		D(vkCmdDrawIndexed);
 		D(vkCmdEndRenderPass);
 		D(vkEndCommandBuffer);
 		D(vkCreateSemaphore);
@@ -128,5 +135,8 @@ struct SDispatch {
 		D(vkDestroyCommandPool);
 		D(vkDestroyShaderModule); 
 		D(vkDestroyDevice);
+
+		D(vkCmdCopyBuffer);
+		D(vkQueueWaitIdle);
 	}
 };

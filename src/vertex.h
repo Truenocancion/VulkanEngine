@@ -5,7 +5,7 @@
 
 struct Vertex {
 	float position[2]; // change to 3 later for 3D
-	float color[3]; // if not working look at glm
+	float color[3]; 
 
 	static VkVertexInputBindingDescription getBindingDescription() {
 		VkVertexInputBindingDescription bindingDescription{};
@@ -17,10 +17,7 @@ struct Vertex {
 
 	static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
 		std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
-		// confusingly - formats here are specified using same enum as color
 		attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
-		// vec2: VK_FORMAT_R32G32_SFLOAT
-		// vec3 : VK_FORMAT_R32G32B32_SFLOAT
 		attributeDescriptions[0].offset = offsetof(Vertex, position);
 		attributeDescriptions[1].location = 1;
 		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
