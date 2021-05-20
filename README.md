@@ -1,3 +1,3 @@
-# VulkanEngine
+# Vulkan Engine
  
-simple triangle - vulkan api
+Triangle with vulkan api
