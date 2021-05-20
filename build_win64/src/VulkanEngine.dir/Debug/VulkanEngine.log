@@ -1,6 +1,0 @@
-﻿  engine.cpp
-  render.cpp
-  viewport.cpp
-  Создание кода...
-D:\vulkan\VulkanEngine\src\render.cpp(592): warning C4715: VulkanRender::find_memory_type: значение возвращается не при всех путях выполнения
-  VulkanEngine.vcxproj -> D:\vulkan\VulkanEngine\bin\Debug\VulkanEngine.exe

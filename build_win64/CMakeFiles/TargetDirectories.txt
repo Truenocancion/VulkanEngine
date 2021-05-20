@@ -1,3 +1,0 @@
-D:/vulkan/VulkanEngine/build_win64/CMakeFiles/ALL_BUILD.dir
-D:/vulkan/VulkanEngine/build_win64/CMakeFiles/ZERO_CHECK.dir
-D:/vulkan/VulkanEngine/build_win64/src/CMakeFiles/VulkanEngine.dir
